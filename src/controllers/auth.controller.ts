@@ -3,25 +3,23 @@ import { UserModel } from "../model/user.model";
 import bcrypt from "bcryptjs"
 import { signAccessToken } from "../utils/tokens";
 
-// After checking the email and password:
-// const accessToken = signAccessToken(user.id);
+
 
 export const login = async (req: Request, res: Response) => {
-    const {email, password} = req.body
-
-    if
-    (
-        typeof email !== "string" || typeof password !== "string"||
-        !email.trim()||
-        !password
-    ){
-        return res.status(400).json({
-            success : false,
-            message: "Email and password are required."
-        });
-    }
-
     try{
+        const {email, password} = req.body ?? {};  // if the req is undefined or null this will use an empty object instead
+
+        if
+        (
+            typeof email !== "string" || typeof password !== "string"||
+            !email.trim()||
+            !password
+        ){
+            return res.status(400).json({
+                success : false,
+                message: "Email and password are required."
+            });
+        }
 
         const user = await UserModel.findOne({
             email: email.trim().toLowerCase()
