@@ -4,7 +4,7 @@ import healthRoutes from "./routes/health.routes";
 
 const app = express();
 
-app.use(express.json);
+app.use(express.json());
 console.log("index.ts loaded");
 
 app.use("/api/health", healthRoutes);
