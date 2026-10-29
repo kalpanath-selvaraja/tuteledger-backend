@@ -15,7 +15,7 @@ export const login = async (req: Request, res: Response) => {
         !email.trim()||
         !password
     ){
-        res.status(400).json({
+        return res.status(400).json({
             success : false,
             message: "Email and password are required."
         });
@@ -28,12 +28,12 @@ export const login = async (req: Request, res: Response) => {
         }).select("+password");
 
         if(!user){
-            return res.status(400).json({message: "User not found !"})
+            return res.status(401).json({message: "Invalid email or password !"})
         }
 
-        const isValid = bcrypt.compare(password, user?.password)
+        const isValid = await bcrypt.compare(password, user?.password)
         if (!isValid){
-            return res.status(400).json({message: "Password oe Email is invalid !"})
+            return res.status(401).json({message: "Invalid email or password !"})
         }
 
 
@@ -42,8 +42,8 @@ export const login = async (req: Request, res: Response) => {
         res.status(200).json({
             message: "User successfully logged in.",
             data:{
-                email:user?.email,
-                role:user?.name,
+                email:user.email,
+                role:user.role,
                 access_token:accessToken,
             }
         })
@@ -51,8 +51,7 @@ export const login = async (req: Request, res: Response) => {
         console.error(err)
         res.status(500).json({
             success: false,
-            message: "Login Failed",
-            error: err
+            message: "Login Failed"
         })
     }
 }
