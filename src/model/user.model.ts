@@ -6,7 +6,7 @@ type UserRole = "tutor" | "receptionist";
 export interface IUser extends Document{
     name: string
     email: string
-    passsword: string
+    password: string
     role: UserRole
     active : boolean
 }
@@ -27,7 +27,7 @@ const userSchema = new Schema<IUser>(
             lowercase: true,
             trim: true,
         },
-        passsword: {
+        password: {
             type: String,
             required: true,
             // select: false,
