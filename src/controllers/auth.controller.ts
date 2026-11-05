@@ -43,7 +43,7 @@ export const login = async (req: Request, res: Response) => {
 
         return sendSuccess(res, {
 
-            accessToken: signAccessToken(user._id.toString()),
+            accessToken: accessToken,
             user: { 
                 id: user._id.toString(), 
                 name: user.name, 
