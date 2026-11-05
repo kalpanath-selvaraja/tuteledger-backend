@@ -1,6 +1,5 @@
 import jwt from "jsonwebtoken";
-import { IUser } from "../model/user.model";
-
+import { env } from "../config/env";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -16,4 +15,14 @@ export const signAccessToken = (userId:string):string => {
         
     )
 }
+
+export const verifyAccessToken = (token: string): { sub: string } => {
+
+  const payload = jwt.verify(token, env.jwtSecret, { algorithms: ["HS256"] });
+  
+  if (typeof payload === "string" || typeof payload.sub !== "string") {
+    throw new Error("Malformed token payload");
+  }
+  return { sub: payload.sub };
+};
 

@@ -1,33 +1,52 @@
-import { NextFunction, Response, Request } from "express";
-import dotenv from "dotenv";
-import jwt from "jsonwebtoken";
+import { NextFunction, Request, Response } from "express";
+import { UserModel, UserRole } from "../models/user.model";
+import { verifyAccessToken } from "../utils/tokens";
+import { sendError } from "../utils/response";
 
-dotenv.config();
-
-const JWT_SECRET = process.env.JWT_SECRET as string;
-
-export interface AuthRequest extends Request{
-    user?: any
+export interface AuthRequest extends Request {
+  user?: { id: string; name: string; email: string; role: UserRole };
 }
 
+export const authenticate = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  const authHeader = req.headers.authorization;
 
-export const authenticate = (req: AuthRequest,res: Response,next: NextFunction) => {
+  if (!authHeader) {
+    return sendError(res, 401, "Authentication required.");
+  }
 
-    const authHeader = req.headers.authorization
+  const parts = authHeader.split(" ");
+  const scheme = parts[0];
+  const token = parts[1];
 
+  if (scheme !== "Bearer" || !token) {
+    return sendError(res, 401, "Authentication required.");
+  }
 
-    if(!authHeader){
-        return res.status(401).json({message: "No Token"})
-    }
+  let userId: string;
 
-    const token = authHeader.split(' ')[1]
-    try{
+  try {
+    const payload = verifyAccessToken(token);
+    userId = payload.sub;
+  } catch (err) {
+    return sendError(res, 401, "Invalid or expired token.");
+  }
 
-        const payload = jwt.verify(token, JWT_SECRET)
-        req.user = payload
-        next()
-    }catch(err){
-        console.error(err)
-        res.status(401).json({message: "Invalid token or Expired"})
-    }
-}
+  const user = await UserModel.findById(userId);
+
+  if (!user || !user.active) {
+    return sendError(res, 401, "Account unavailable.");
+  }
+
+  req.user = {
+    id: user._id.toString(),
+    name: user.name,
+    email: user.email,
+    role: user.role,
+  };
+
+  next();
+};

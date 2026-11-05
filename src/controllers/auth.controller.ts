@@ -1,13 +1,14 @@
 import {Request, Response} from "express";
-import { UserModel } from "../model/user.model";
+import { UserModel } from "../models/user.model";
 import bcrypt from "bcryptjs"
 import { signAccessToken } from "../utils/tokens";
 import { AuthRequest } from "../middleware/auth.middleware";
+import { sendError, sendSuccess } from "../utils/response";
 
 
 
 export const login = async (req: Request, res: Response) => {
-    try{
+    
         const {email, password} = req.body ?? {};  // if the req is undefined or null this will use an empty object instead
 
         if
@@ -24,93 +25,41 @@ export const login = async (req: Request, res: Response) => {
 
         const user = await UserModel.findOne({
             email: email.trim().toLowerCase()
-        }).select("+password");
+        }).select("+passwordHash");
 
 
-        
+        const passwordOk = user ? await bcrypt.compare(password, user.passwordHash) : false;
 
-        if (!user) {
-            return res.status(401).json({
-                message: "Invalid email or password !"
-            });
+        if (!user || !passwordOk || !user.active) {
+            return sendError(res, 401, "Invalid email or password.");
         }
-        
-        
-        
-        const isValid = await bcrypt.compare(password, user.password);
-        
-        
-        
-        if (!isValid) {
-            return res.status(401).json({
-                message: "Invalid email or password !"
-            });
-        }
+
+
 
         
 
 
         const accessToken = signAccessToken(user._id.toString())
 
-        res.status(200).json({
-            message: "User successfully logged in.",
-            data:{
-                email:user.email,
-                role:user.role,
-                access_token:accessToken,
-            }
-        })
-    }catch(err){
-        console.error(err)
-        res.status(500).json({
-            success: false,
-            message: "Login Failed"
-        })
-    }
+        return sendSuccess(res, {
+
+            accessToken: signAccessToken(user._id.toString()),
+            user: { 
+                id: user._id.toString(), 
+                name: user.name, 
+                email: user.email, 
+                role: user.role 
+            },
+
+        });
+    
+    
 }
 
-export const getMe   = async (req: AuthRequest, res: Response ) => {
-
-
-    if(!req.user.sub){
-        res.status(401).json({
-            success: false,
-            message: "Authentication required"
-        });
-        return;
+export const getMe = (req: AuthRequest, res: Response) => {
+    if (!req.user) {
+        return sendError(res, 401, "Authentication required.");
     }
 
-    try{
-
-        const user = await UserModel.findById(req.user.sub);
-       
-        if(!user || !user.active){
-            res.status(401).json({
-                success: false,
-                message: "Account unavailable",
-            });
-            return;
-        }
-
-        res.status(200).json({
-            success: true,
-            data: {
-                id : user._id.toString(),
-                name : user.name,
-                email : user.email,
-                role: user.role
-            }
-        });
-
-    }catch(error){
-        console.error("Failed to retrieve current user:" , error);
-        
-        res.status(500).json({
-            success: false,
-            message: "Unable to retrieve account."
-        });
-
-    }
-
-}
-
+    return sendSuccess(res, req.user);
+};
