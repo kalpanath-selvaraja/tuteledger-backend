@@ -3,10 +3,9 @@ dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
 import app from "./app";
 import { env } from "./config/env";
-import { connectDB } from "./config/db";
 
-// console.log("index.ts loaded");
-connectDB();
+
+
 
 
 if (!process.env.VERCEL) {
