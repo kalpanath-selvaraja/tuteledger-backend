@@ -10,9 +10,10 @@ const app = express();
 app.use(express.json());
 
 
-app.use( async (req, res,next) => {
+app.use( async (_req, res,next) => {
     try{
         await connectDB();
+        next();
     }catch{
         console.error("MongoDB connection failed");
         sendError(res, 503, "Database temporarily unavailable.");
