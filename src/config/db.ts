@@ -1,7 +1,10 @@
 // src/config/db.ts
 import mongoose from "mongoose";
 import { env } from "../config/env";
-import { promises } from "node:dns";
+import dns from "node:dns";
+
+// Apply the DNS workaround whichever application entry point is used.
+dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
 let connectPromise : Promise<void> | null = null
 
