@@ -6,7 +6,7 @@ import { connectDB } from "./config/db";
 import { sendError } from "./utils/response";
 import  cors from "cors"
 import { env } from "./config/env";
-
+import classesRouter from "./routes/classes.routes";
 
 const app = express();
 
@@ -14,7 +14,7 @@ const app = express();
 
 app.use(cors({ origin: env.corsOrigins }));
 app.use(express.json());
-
+app.use("/api/classes", classesRouter);
 
 
 app.use( async (_req, res,next) => {
