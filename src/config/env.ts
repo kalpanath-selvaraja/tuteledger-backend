@@ -13,5 +13,5 @@ export const env = {
   mongoUrl: process.env.MONGO_URL as string,
   jwtSecret: process.env.JWT_SECRET as string,
   jwtRefreshSecret : process.env.JWT_REFRESH_SECRET as string,
-  corsOrigins : process.env.CORS_ORIGINS as string
+  corsOrigins : (process.env.CORS_ORIGINS as string)
 };
