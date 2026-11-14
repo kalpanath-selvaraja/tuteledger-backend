@@ -7,15 +7,12 @@ import { sendError } from "./utils/response";
 import  cors from "cors"
 import { env } from "./config/env";
 import classesRouter from "./routes/classes.routes";
+import studentsRouter from "./routes/student.routes"
 
 const app = express();
 
-
-
 app.use(cors({ origin: env.corsOrigins }));
 app.use(express.json());
-app.use("/api/classes", classesRouter);
-
 
 app.use( async (_req, res,next) => {
     try{
@@ -36,5 +33,7 @@ app.use( async (_req, res,next) => {
 app.use("/api/health", healthRoutes);
 app.use("/api/auth", authRouter);
 app.use("/api/users",  usersRouter)
+app.use("/api/classes", classesRouter);
+app.use("/api/students", studentsRouter);
 
 export default app;
