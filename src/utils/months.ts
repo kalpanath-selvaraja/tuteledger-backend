@@ -21,3 +21,30 @@ export const getCurrentMonth = (now: Date = new Date()):string => {
 
     return `${year}-${month}`
 }
+
+export const listMonths = (from: string, to: string): string[] => {
+    const months: string[] = []
+
+    let year = Number(from.slice(0, 4))
+    let month = Number(from.slice(5, 7))
+
+    // Months compare as plain text, so "2026-09" < "2026-10" works.
+    // The 600 limit is a safety stop so it  never loop forever.
+    while (months.length < 600) {
+        const label = String(year) + "-" + String(month).padStart(2, "0")
+
+        if (label > to) {
+            break
+        }
+
+        months.push(label)
+
+        month = month + 1
+        if (month > 12) {
+            month = 1
+            year = year + 1
+        }
+    }
+
+    return months
+}
