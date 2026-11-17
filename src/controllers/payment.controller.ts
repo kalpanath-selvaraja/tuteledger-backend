@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
 import { HydratedDocument, Types, isValidObjectId } from "mongoose";
 import { AuthRequest } from "../middleware/auth.middleware";
-import { ClassModel } from "../models/class.model";
-import { EnrollmentModel } from "../models/enrollment.model";
+import { ClassModel  , IClass} from "../models/class.model";
+import { EnrollmentModel, IEnrollment } from "../models/enrollment.model";
 import { IPayment, PaymentKind, PaymentModel } from "../models/payment.model";
 import { getFeeForMonth } from "../utils/fee";
 import { getCurrentMonth, isValidMonth } from "../utils/months";
@@ -14,19 +14,19 @@ const MAX_REASON_LENGTH = 200;
 type Item = { enrollmentId: string; month: string };
 
 
-const toPaymentResponse = (p: HydratedDocument<IPayment>) => {
+const toPaymentResponse = (payment: HydratedDocument<IPayment>) => {
   return {
-    id: p._id.toString(),
-    enrollmentId: p.enrollmentId.toString(),
-    month: p.month,
-    kind: p.kind,
-    amountLKR: p.amountLKR,
-    paidOn: p.paidOn,
-    receiptNo: p.receiptNo,
-    reason: p.reason,
-    recordedBy: p.recordedBy.toString(),
-    status: p.status,
-    voidReason: p.voidReason,
+    id: payment._id.toString(),
+    enrollmentId: payment.enrollmentId.toString(),
+    month: payment.month,
+    kind: payment.kind,
+    amountLKR: payment.amountLKR,
+    paidOn: payment.paidOn,
+    receiptNo: payment.receiptNo,
+    reason: payment.reason,
+    recordedBy: payment.recordedBy.toString(),
+    status: payment.status,
+    voidReason: payment.voidReason,
   };
 };
 
@@ -94,19 +94,36 @@ const recordRows = async (
   reason: string | null
 ) => {
   try {
-    //  every enrollment, and the class of each one
-    const enrollmentIds = [...new Set(items.map((item) => item.enrollmentId))];
+    
+    // Load each enrollment and class once.
+    const enrollmentIdSet = new Set<string>();
+
+    for (const item of items) {
+      enrollmentIdSet.add(item.enrollmentId);
+    }
+
+    const enrollmentIds = Array.from(enrollmentIdSet);
     const enrollments = await EnrollmentModel.find({ _id: { $in: enrollmentIds } });
 
     if (enrollments.length !== enrollmentIds.length) {
       return sendError(res, 404, "Enrollment not found.");
     }
 
-    const classIds = [...new Set(enrollments.map((e) => e.classId.toString()))];
-    const classes = await ClassModel.find({ _id: { $in: classIds } });
+    const classIdSet = new Set<string>();
+    const enrollmentById = new Map<string, HydratedDocument<IEnrollment>>();
 
-    const enrollmentById = new Map(enrollments.map((e) => [e._id.toString(), e]));
-    const classById = new Map(classes.map((c) => [c._id.toString(), c]));
+    for (const enrollment of enrollments) {
+      classIdSet.add(enrollment.classId.toString());
+      enrollmentById.set(enrollment._id.toString(), enrollment);
+    }
+
+    const classIds = Array.from(classIdSet);
+    const classes = await ClassModel.find({ _id: { $in: classIds } });
+    const classById = new Map<string, HydratedDocument<IClass>>();
+
+    for (const tuitionClass of classes) {
+      classById.set(tuitionClass._id.toString(), tuitionClass);
+    }
 
     //  the month must be inside the enrollment's period (no prepaying, no month before joining)
     const currentMonth = getCurrentMonth();
@@ -147,34 +164,52 @@ const recordRows = async (
     const receiptNo = kind === "payment" ? makeReceiptNo() : null;
     const now = new Date();
 
-    const rows = items.map((item) => {
-      const enrollment = enrollmentById.get(item.enrollmentId)!;
-      const classFound = classById.get(enrollment.classId.toString())!;
+    const rows: IPayment[] = [];
 
-      return {
+    for (const item of items) {
+      const enrollment = enrollmentById.get(item.enrollmentId)!;
+      const tuitionClass = classById.get(enrollment.classId.toString())!;
+
+      let amountLKR = 0;
+
+      if (kind === "payment") {
+        amountLKR = getFeeForMonth(tuitionClass, item.month);
+      }
+
+      const paymentRow: IPayment = {
         enrollmentId: enrollment._id,
         month: item.month,
-        kind,
-        amountLKR: kind === "payment" ? getFeeForMonth(classFound, item.month) : 0,
+        kind: kind,
+        amountLKR: amountLKR,
         paidOn: now,
-        receiptNo,
-        reason,
+        receiptNo: receiptNo,
+        reason: reason,
         recordedBy: new Types.ObjectId(userId),
-        status: "active" as const,
+        status: "active",
         voidReason: null,
       };
-    });
 
-    const created = await PaymentModel.insertMany(rows);
+      rows.push(paymentRow);
+    }
 
-    // REPLY
-    const totalLKR = created.reduce((sum, row) => sum + row.amountLKR, 0);
+    const createdPayments = await PaymentModel.insertMany(rows);
 
-    return sendSuccess(
-      res,
-      { receiptNo, totalLKR, payments: created.map((row) => toPaymentResponse(row)) },
-      201
-    );
+    // Calculate the total and prepare the payment response.
+    let totalLKR = 0;
+    const paymentResponseList: ReturnType<typeof toPaymentResponse>[] = [];
+
+    for (const payment of createdPayments) {
+        totalLKR = totalLKR + payment.amountLKR;
+
+        const paymentResponse = toPaymentResponse(payment);
+        paymentResponseList.push(paymentResponse);
+    }
+
+    return sendSuccess(res, {
+        receiptNo: receiptNo,
+        totalLKR: totalLKR,
+        payments: paymentResponseList,
+    }, 201);
   } catch (err) {
     if (isDuplicateKeyError(err)) {
       return sendError(res, 409, "One of these months was just paid or waived by someone else.");
@@ -185,6 +220,7 @@ const recordRows = async (
 };
 
 // POST payments (Tutor and Receptionist)
+// Create payment
 export const createPayment = async (req: AuthRequest, res: Response) => {
   if (!req.user) {
     return sendError(res, 401, "Authentication required.");
@@ -211,6 +247,7 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
 };
 
 // POST waivers (Tutor only)
+// Create waiver
 export const createWaiver = async (req: AuthRequest, res: Response) => {
   if (!req.user) {
     return sendError(res, 401, "Authentication required.");
@@ -282,19 +319,32 @@ export const getPayments = async (req: Request, res: Response) => {
       filter.enrollmentId = enrollmentId;
     } else if (typeof studentId === "string") {
       const enrollments = await EnrollmentModel.find({ studentId });
-      filter.enrollmentId = { $in: enrollments.map((e) => e._id) };
+      const enrollmentIds: Types.ObjectId[] = [];
+
+      for (const enrollment of enrollments) {
+        enrollmentIds.push(enrollment._id);
+      }
+
+      filter.enrollmentId = { $in: enrollmentIds };
     }
 
     // All statuses are returned, so voided rows stay visible.
-    const found = await PaymentModel.find(filter).sort({ paidOn: -1, _id: -1 });
+    const paymentList = await PaymentModel.find(filter).sort({ paidOn: -1, _id: -1 });
+    const paymentResponseList: ReturnType<typeof toPaymentResponse>[] = [];
 
-    return sendSuccess(res, found.map((p) => toPaymentResponse(p)));
+    for (const payment of paymentList) {
+      const paymentResponse = toPaymentResponse(payment);
+      paymentResponseList.push(paymentResponse);
+    }
+
+    return sendSuccess(res, paymentResponseList);
   } catch (err) {
     return sendError(res, 500, "Could not load the payments.");
   }
 };
 
 // PUT payments/:id/void (Tutor only) Works for waivers too voiding a waiver reopens the month
+// Void payment
 export const voidPayment = async (req: Request, res: Response) => {
   const id = req.params.id;
   const { reason } = req.body ?? {};

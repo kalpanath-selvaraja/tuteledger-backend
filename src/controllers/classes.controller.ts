@@ -33,18 +33,19 @@ const validateClassFields = ( name: unknown,subject: unknown,dayOfWeek: unknown,
 };
 
 // Builds the response field by field, so nothing extra is ever sent.
-const toClassResponse = (c: HydratedDocument<IClass>) => {
+const toClassResponse = (tuitionClass: HydratedDocument<IClass>) => {
   return {
-    id: c._id.toString(),
-    name: c.name,
-    subject: c.subject,
-    dayOfWeek: c.dayOfWeek,
-    startTime: c.startTime,
-    monthlyFeeLKR: c.monthlyFeeLKR,
-    active: c.active,
+    id: tuitionClass._id.toString(),
+    name: tuitionClass.name,
+    subject: tuitionClass.subject,
+    dayOfWeek: tuitionClass.dayOfWeek,
+    startTime: tuitionClass.startTime,
+    monthlyFeeLKR: tuitionClass.monthlyFeeLKR,
+    active: tuitionClass.active,
   };
 };
 
+// Create class
 export const createClass = async (req: Request, res: Response) => {
   const { name, subject, dayOfWeek, startTime, monthlyFeeLKR } = req.body ?? {};
 
@@ -69,21 +70,24 @@ export const createClass = async (req: Request, res: Response) => {
   }
 }
 
+// Get classes
 export const getClasses = async (_req: Request, res: Response) => {
-  try {
-    const classes = await ClassModel.find().sort({ name: 1 })
+    try {
+        const classList = await ClassModel.find().sort({ name: 1 });
+        const classResponseList: ReturnType<typeof toClassResponse>[] = [];
 
-    return sendSuccess(
-      res,
-      classes.map((c) => {
-        return toClassResponse(c);
-      })
-    )
-  } catch (err) {
-    return sendError(res, 500, "Could not load the classes.")
-  }
-}
+        for (const tuitionClass of classList) {
+            const classResponse = toClassResponse(tuitionClass);
+            classResponseList.push(classResponse);
+        }
 
+        return sendSuccess(res, classResponseList);
+    } catch (err) {
+        return sendError(res, 500, "Could not load the classes.");
+    }
+};
+
+// Get class
 export const getClassById = async (req: Request, res: Response) => {
   const id = req.params.id
 
@@ -104,6 +108,7 @@ export const getClassById = async (req: Request, res: Response) => {
   }
 }
 
+// Update class
 export const updateClass = async (req: Request, res: Response) => {
   const id = req.params.id
   const { name, subject, dayOfWeek, startTime, monthlyFeeLKR, active } = req.body ?? {}
@@ -147,6 +152,7 @@ export const updateClass = async (req: Request, res: Response) => {
   }
 }
 
+// Delete class
 export const deleteClass = async (req: Request, res: Response) => {
   const id = req.params.id
 

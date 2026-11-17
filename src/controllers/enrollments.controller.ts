@@ -8,15 +8,15 @@ import { getCurrentMonth, isValidMonth } from "../utils/months";
 import { PaymentModel } from "../models/payment.model"
 
 
-const toEnrollmentResponse = (e: HydratedDocument<IEnrollment>) => {
+const toEnrollmentResponse = (enrollment: HydratedDocument<IEnrollment>) => {
 
   return {
-    id: e._id.toString(),
-    studentId: e.studentId.toString(),
-    classId: e.classId.toString(),
-    startMonth: e.startMonth,
+    id: enrollment._id.toString(),
+    studentId: enrollment.studentId.toString(),
+    classId: enrollment.classId.toString(),
+    startMonth: enrollment.startMonth,
 
-    endMonth: e.endMonth,
+    endMonth: enrollment.endMonth,
   }
 }
 
@@ -86,7 +86,8 @@ export const createEnrollment = async (req:Request, res:Response) => {
 
 }
 
-export const updateEnrollmengts = async(req:Request, res: Response) => {
+// Update enrollment
+export const updateEnrollment = async(req:Request, res: Response) => {
 
     const id = req.params.id
     const {endMonth} = req.body ?? {}
@@ -151,6 +152,7 @@ export const updateEnrollmengts = async(req:Request, res: Response) => {
     }
 }
 
+// Get enrollments
 export const getEnrollments = async (req: Request, res: Response) => {
     const {studentId, classId} = req.query
 
@@ -178,11 +180,15 @@ export const getEnrollments = async (req: Request, res: Response) => {
     }
 
     try {
-        const found = await EnrollmentModel.find(filter).sort({ startMonth: 1 });
+        const enrollmentList = await EnrollmentModel.find(filter).sort({ startMonth: 1 });
+        const enrollmentResponseList: ReturnType<typeof toEnrollmentResponse>[] = [];
 
-        return sendSuccess(res, found.map((e) => {
-        return toEnrollmentResponse(e);
-        }));
+        for (const enrollment of enrollmentList) {
+            const enrollmentResponse = toEnrollmentResponse(enrollment);
+            enrollmentResponseList.push(enrollmentResponse);
+        }
+
+        return sendSuccess(res, enrollmentResponseList);
     } catch (err) {
         return sendError(res, 500, "Could not load the enrollments.");
     }

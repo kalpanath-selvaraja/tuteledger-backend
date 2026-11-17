@@ -28,15 +28,15 @@ const validateStudentFields = (name: unknown, guardianName: unknown, phone: unkn
 }
 
 // the response method Will only send what the frontend needs. 
-const toStudentResponse = (s: HydratedDocument<IStudent>) => {
-  return {
-    id: s._id.toString(),
-    name: s.name,
-    guardianName: s.guardianName,
-    phone: s.phone,
-    status: s.status,
-  }
-}
+const toStudentResponse = (student: HydratedDocument<IStudent>) => {
+    return {
+        id: student._id.toString(),
+        name: student.name,
+        guardianName: student.guardianName,
+        phone: student.phone,
+        status: student.status,
+    };
+};
 
 const escapeRegex = (text: string): string => {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
@@ -101,10 +101,15 @@ export const getStudents = async (req: Request, res: Response) => {
       StudentModel.countDocuments(filter),
     ])
 
+    const studentResponseList: ReturnType<typeof toStudentResponse>[] = [];
+
+    for (const student of students) {
+      const studentResponse = toStudentResponse(student);
+      studentResponseList.push(studentResponse);
+    }
+
     return sendSuccess(res, {
-      students: students.map((s) => {
-        return toStudentResponse(s)
-      }),
+      students: studentResponseList,
       page: page,
       limit: limit,
       total: total,
