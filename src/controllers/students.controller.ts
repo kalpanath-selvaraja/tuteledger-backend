@@ -3,9 +3,12 @@ import { HydratedDocument, isValidObjectId } from "mongoose";
 import { AuthRequest } from "../middleware/auth.middleware";
 import { IStudent, STUDENT_STATUSES, StudentModel } from "../models/student.model";
 import { sendError, sendSuccess } from "../utils/response";
+import { EnrollmentModel } from "../models/enrollment.model";
 
+// Regex to check the Phone numbers
 const PHONE_PATTERN = /^\+?[0-9]{9,12}$/;
 
+// Validation
 const validateStudentFields = (name: unknown, guardianName: unknown, phone: unknown): string[] => {
   const errors: string[] = [];
 
@@ -24,6 +27,7 @@ const validateStudentFields = (name: unknown, guardianName: unknown, phone: unkn
   return errors;
 }
 
+// the response method Will only send what the frontend needs. 
 const toStudentResponse = (s: HydratedDocument<IStudent>) => {
   return {
     id: s._id.toString(),
@@ -38,6 +42,8 @@ const escapeRegex = (text: string): string => {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
 
+
+// Create Student
 export const createStudent = async (req: Request, res: Response) => {
   const { name, guardianName, phone } = req.body ?? {}
 
@@ -48,17 +54,19 @@ export const createStudent = async (req: Request, res: Response) => {
   }
 
   try {
-    const created = await StudentModel.create({
+      await StudentModel.create({
       name: name.trim(),
       guardianName: guardianName.trim(),
       phone: phone.trim(),
     })
 
-    return sendSuccess(res, toStudentResponse(created), 201)
+    return sendSuccess(res, null, 201)
   } catch (err) {
     return sendError(res, 500, "Could not create the student.")
   }
 }
+
+// Get Student
 
 export const getStudents = async (req: Request, res: Response) => {
 
@@ -107,6 +115,7 @@ export const getStudents = async (req: Request, res: Response) => {
   }
 }
 
+// Get Student By ID
 export const getStudentById = async (req: Request, res: Response) => {
   const id = req.params.id
 
@@ -127,6 +136,7 @@ export const getStudentById = async (req: Request, res: Response) => {
   }
 }
 
+// Update Studnet
 export const updateStudent = async (req: AuthRequest, res: Response) => {
   const id = req.params.id
   const { name, guardianName, phone, status } = req.body ?? {};
@@ -156,6 +166,14 @@ export const updateStudent = async (req: AuthRequest, res: Response) => {
       return sendError(res, 404, "Student not found.")
     }
 
+    if (status === "inactive" && found.status !== "inactive") {
+      const openEnrollments = await EnrollmentModel.countDocuments({ studentId: found._id, endMonth: null })
+
+      if (openEnrollments > 0) {
+        return sendError(res, 409, "End the student's enrollments before making the student inactive.")
+      }
+    }
+
     found.name = name.trim()
     found.guardianName = guardianName.trim()
     found.phone = phone.trim()
@@ -166,7 +184,7 @@ export const updateStudent = async (req: AuthRequest, res: Response) => {
 
     await found.save()
 
-    return sendSuccess(res, toStudentResponse(found))
+    return sendSuccess(res, null, 200)
   } catch (err) {
     return sendError(res, 500, "Could not update the student.")
   }
