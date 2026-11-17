@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { HydratedDocument, isValidObjectId } from "mongoose";
 import { ClassModel, DAYS_OF_WEEK, IClass } from "../models/class.model";
 import { sendError, sendSuccess } from "../utils/response";
+import { EnrollmentModel } from "../models/enrollment.model";
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -64,84 +65,112 @@ export const createClass = async (req: Request, res: Response) => {
 
     return sendSuccess(res, toClassResponse(created), 201);
   } catch (err) {
-    return sendError(res, 500, "Could not create the class.");
+    return sendError(res, 500, "Could not create the class.")
   }
-};
+}
 
 export const getClasses = async (_req: Request, res: Response) => {
   try {
-    const classes = await ClassModel.find().sort({ name: 1 });
+    const classes = await ClassModel.find().sort({ name: 1 })
 
     return sendSuccess(
       res,
       classes.map((c) => {
         return toClassResponse(c);
       })
-    );
+    )
   } catch (err) {
-    return sendError(res, 500, "Could not load the classes.");
+    return sendError(res, 500, "Could not load the classes.")
   }
-};
+}
 
 export const getClassById = async (req: Request, res: Response) => {
-  const id = req.params.id;
+  const id = req.params.id
 
   if (!isValidObjectId(id)) {
-    return sendError(res, 404, "Class not found.");
+    return sendError(res, 404, "Class not found.")
   }
 
   try {
-    const found = await ClassModel.findById(id);
+    const found = await ClassModel.findById(id)
 
     if (!found) {
-      return sendError(res, 404, "Class not found.");
+      return sendError(res, 404, "Class not found.")
     }
 
-    return sendSuccess(res, toClassResponse(found));
+    return sendSuccess(res, toClassResponse(found))
   } catch (err) {
-    return sendError(res, 500, "Could not load the class.");
+    return sendError(res, 500, "Could not load the class.")
   }
-};
+}
 
 export const updateClass = async (req: Request, res: Response) => {
-  const id = req.params.id;
-  const { name, subject, dayOfWeek, startTime, monthlyFeeLKR, active } = req.body ?? {};
+  const id = req.params.id
+  const { name, subject, dayOfWeek, startTime, monthlyFeeLKR, active } = req.body ?? {}
 
-  const errors = validateClassFields(name, subject, dayOfWeek, startTime, monthlyFeeLKR);
+  const errors = validateClassFields(name, subject, dayOfWeek, startTime, monthlyFeeLKR)
 
   if (active !== undefined && typeof active !== "boolean") {
-    errors.push("Active must be true or false.");
+    errors.push("Active must be true or false.")
   }
 
   if (errors.length > 0) {
-    return sendError(res, 400, "Validation failed.", errors);
+    return sendError(res, 400, "Validation failed.", errors)
   }
 
   if (!isValidObjectId(id)) {
-    return sendError(res, 404, "Class not found.");
+    return sendError(res, 404, "Class not found.")
   }
 
   try {
-    const found = await ClassModel.findById(id);
+    const found = await ClassModel.findById(id)
 
     if (!found) {
-      return sendError(res, 404, "Class not found.");
+      return sendError(res, 404, "Class not found.")
     }
 
-    found.name = name.trim();
-    found.subject = subject.trim();
-    found.dayOfWeek = dayOfWeek;
-    found.startTime = startTime;
-    found.monthlyFeeLKR = monthlyFeeLKR;
+    found.name = name.trim()
+    found.subject = subject.trim()
+    found.dayOfWeek = dayOfWeek
+    found.startTime = startTime
+    found.monthlyFeeLKR = monthlyFeeLKR
 
     if (active !== undefined) {
-      found.active = active;
+      found.active = active
     }
 
-    await found.save();
+    await found.save()
 
-    return sendSuccess(res, toClassResponse(found));
+    return sendSuccess(res, toClassResponse(found))
   } catch (err) {
-    return sendError(res, 500, "Could not update the class.");
+    return sendError(res, 500, "Could not update the class.")
   }
-};
+}
+
+export const deleteClass = async (req: Request, res: Response) => {
+  const id = req.params.id
+
+  if (!isValidObjectId(id)) {
+    return sendError(res, 404, "Class not found.")
+  }
+
+  try {
+    const found = await ClassModel.findById(id)
+
+    if (!found) {
+      return sendError(res, 404, "Class not found.")
+    }
+
+    const enrollmentCount = await EnrollmentModel.countDocuments({ classId: found._id })
+
+    if (enrollmentCount > 0) {
+      return sendError(res, 409, "This class has enrollments and cannot be deleted.")
+    }
+
+    await found.deleteOne()
+
+    return sendSuccess(res, null)
+  } catch (err) {
+    return sendError(res, 500, "Could not delete the class.")
+  }
+}
