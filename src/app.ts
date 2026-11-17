@@ -8,6 +8,7 @@ import  cors from "cors"
 import { env } from "./config/env";
 import classesRouter from "./routes/classes.routes";
 import studentsRouter from "./routes/student.routes"
+import enrollmentRouter from "./routes/enrollments.routes"
 
 const app = express();
 
@@ -35,5 +36,6 @@ app.use("/api/auth", authRouter);
 app.use("/api/users",  usersRouter)
 app.use("/api/classes", classesRouter);
 app.use("/api/students", studentsRouter);
+app.use("/api/enrollments", enrollmentRouter)
 
 export default app;
