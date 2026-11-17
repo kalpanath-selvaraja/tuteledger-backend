@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createClass,getClasses, getClassById, updateClass, } from "../controllers/classes.controller";
+import { createClass,getClasses, getClassById, updateClass, deleteClass, } from "../controllers/classes.controller";
 
 import { authenticate } from "../middleware/auth.middleware";
 import { requireTutor } from "../middleware/role.middleware";
@@ -11,5 +11,6 @@ router.get("/:id", authenticate, getClassById);
 
 router.post("/", authenticate, requireTutor, createClass);
 router.put("/:id", authenticate, requireTutor, updateClass);
+router.delete("/:id", authenticate, requireTutor, deleteClass);
 
 export default router;
