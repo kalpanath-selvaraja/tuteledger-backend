@@ -5,7 +5,7 @@ import { StudentModel } from "../models/student.model";
 import { ClassModel } from "../models/class.model";
 import { EnrollmentModel, IEnrollment } from "../models/enrollment.model";
 import { getCurrentMonth, isValidMonth } from "../utils/months";
-
+import { PaymentModel } from "../models/payment.model"
 
 
 const toEnrollmentResponse = (e: HydratedDocument<IEnrollment>) => {
@@ -130,7 +130,16 @@ export const updateEnrollmengts = async(req:Request, res: Response) => {
             if (errors.length > 0) {
                 return sendError(res, 400, "Validation failed.", errors);
             }
+            
+            const laterRows = await PaymentModel.countDocuments({
+                enrollmentId: found._id,
+                status: "active",
+                month: { $gt: endMonth },
+            });
 
+            if (laterRows > 0) {
+                return sendError(res, 409, "Payments or waivers exist after that month. Void them first.");
+            }
             found.endMonth = endMonth;
         }
         
