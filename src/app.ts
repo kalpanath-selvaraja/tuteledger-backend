@@ -9,6 +9,8 @@ import { env } from "./config/env";
 import classesRouter from "./routes/classes.routes";
 import studentsRouter from "./routes/student.routes"
 import enrollmentRouter from "./routes/enrollments.routes"
+import paymentsRouter from "./routes/payment.routes";
+import waiversRouter from "./routes/waiver.routes";
 
 const app = express();
 
@@ -37,5 +39,7 @@ app.use("/api/users",  usersRouter)
 app.use("/api/classes", classesRouter);
 app.use("/api/students", studentsRouter);
 app.use("/api/enrollments", enrollmentRouter)
+app.use("/api/payments", paymentsRouter);
+app.use("/api/waivers", waiversRouter);
 
 export default app;
