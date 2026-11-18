@@ -4,21 +4,21 @@ TuteLedger is a back-office web app for private tuition tutors. A tutor records 
 
 This repository is the **backend** (REST API). The React frontend is in a separate repository.
 
-| | |
-|---|---|
-| Live backend | https://tuteledger-backend.vercel.app (health check: `/api/health`) |
-| Live frontend | https://tuteledger-frontend.vercel.app |
-| Backend repository | https://github.com/kalpanath-selvaraja/tuteledger-backend |
-| Frontend repository | https://github.com/kalpanath-selvaraja/tuteledger-frontend |
+|                     |                                                                       |
+| ------------------- | --------------------------------------------------------------------- |
+| Live backend        | https://tuteledger-backend.onrender.com (health check: `/api/health`) |
+| Live frontend       | https://tuteledger-frontend.vercel.app                                |
+| Backend repository  | https://github.com/kalpanath-selvaraja/tuteledger-backend             |
+| Frontend repository | https://github.com/kalpanath-selvaraja/tuteledger-frontend            |
 
 ## Demo logins
 
 Fictional accounts and fictional data, for marking only.
 
-| Role         | Email                     | Password               |
-| ------------ | ------------------------- | ---------------------- |
-| Tutor        | tutor1@example.com        | tutor1Demo2026!        |
-| Receptionist | receptionist1@example.com | receptionist1Demo2026! |
+| Role         | Email                  | Password               |
+| ------------ | ---------------------- | ---------------------- |
+| Tutor        | tutor1@example.com     | tutor1Demo2026!        |
+| Receptionist | reception1@example.com | receptionist1Demo2026! |
 
 ## Technologies
 
@@ -26,7 +26,7 @@ Fictional accounts and fictional data, for marking only.
 - MongoDB Atlas with Mongoose (validation and indexes)
 - JWT (access and refresh tokens), bcryptjs (password hashing)
 - cors, dotenv
-- Deployed on Vercel (serverless), database on MongoDB Atlas
+- Deployed on Render, database on MongoDB Atlas
 
 ## Main features
 
@@ -76,6 +76,10 @@ npm run dev                           # http://localhost:5000/api
 The seed script is safe to run more than once: an account that already exists is left unchanged.
 
 Production build: `npm run build` then `npm start`.
+
+## Deployment
+
+The backend runs as a Render web service with the build command `npm install dev && npm run build` and the start command `npm start`. The environment variables are the ones in the table above (Render sets `PORT` itself), and the database is MongoDB Atlas. The frontend is deployed separately on Vercel.
 
 ## Setup and run (frontend)
 
@@ -134,6 +138,8 @@ src/
   utils/         response helpers, token helpers, month and fee helpers
 ```
 
+
+
 ## Not in this version
 
 Attendance marking, a dashboard of collected and outstanding totals, partial payments, fee history (a fee change currently applies to unpaid months too), deactivating or reactivating accounts (the refresh route already refuses a deactivated user, but no endpoint or screen can deactivate one yet), and student or parent login.
@@ -144,4 +150,4 @@ Attendance marking, a dashboard of collected and outstanding totals, partial pay
 - The server cannot revoke a refresh token before it expires (there is no token store).
 - Changing a password does not sign out sessions that are already open: an access token stays valid until it expires (15 minutes).
 - Owed amounts are derived from the enrollment period and the class fee, not stored, so they can change if a fee is edited.
-
+- The backend runs on Render's free tier, which sleeps after about 15 minutes without requests. The first request after a pause can take up to a minute.
