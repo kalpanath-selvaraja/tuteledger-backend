@@ -4,6 +4,7 @@ import { UserModel } from "../models/user.model";
 import { sendError, sendSuccess } from "../utils/response";
 
 const MIN_PASSWORD_LENGTH = 8;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const createUser = async (req: Request, res: Response) => {
   const { name, email, password } = req.body ?? {};
@@ -16,6 +17,8 @@ export const createUser = async (req: Request, res: Response) => {
 
   if (typeof email !== "string" || !email.trim()) {
     errors.push("Email is required.");
+  } else if (!EMAIL_PATTERN.test(email.trim())) {
+    errors.push("Enter a valid email address.");
   }
 
   if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH) {
