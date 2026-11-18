@@ -152,11 +152,17 @@ const recordRows = async (
     //  nothing may already be paid or waived (the unique index is the backstop for races)
     const taken = await PaymentModel.find({
       status: "active",
-      $or: items.map((item) => ({ enrollmentId: item.enrollmentId, month: item.month })),
+      $or: items,
     });
 
     if (taken.length > 0) {
-      const months = taken.map((t) => t.month).join(", ");
+      const takenMonths: string[] = [];
+
+      for (const payment of taken) {
+        takenMonths.push(payment.month);
+      }
+
+      const months = takenMonths.join(", ");
       return sendError(res, 409, "Already paid or waived: " + months + ".");
     }
 
@@ -276,8 +282,13 @@ export const createWaiver = async (req: AuthRequest, res: Response) => {
     return sendError(res, 400, "Validation failed.", errors);
   }
 
-  const asItems = (months as unknown[]).map((month) => ({ enrollmentId, month }));
-  const clean = readItems(asItems, errors);
+  const waiverItems: { enrollmentId: string; month: unknown }[] = [];
+
+  for (const month of months as unknown[]) {
+    waiverItems.push({ enrollmentId, month });
+  }
+
+  const clean = readItems(waiverItems, errors);
 
   if (errors.length > 0) {
     return sendError(res, 400, "Validation failed.", errors);
