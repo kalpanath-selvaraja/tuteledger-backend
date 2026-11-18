@@ -25,14 +25,16 @@ export const login = async (req: Request, res: Response) => {
         return sendError(res, 401, "Invalid email or password.");
     }
 
-    const accessToken = signAccessToken(user._id.toString())
-    const refreshToken = signRefreshToken(user._id.toString())
+    const userId = user._id.toString();
+
+    const accessToken = signAccessToken(userId)
+    const refreshToken = signRefreshToken(userId)
 
     return sendSuccess(res, {
         accessToken: accessToken,
         refreshToken:refreshToken,
         user: {
-            id: user._id.toString(), 
+            id: userId, 
             name: user.name, 
             email: user.email, 
             role: user.role 
